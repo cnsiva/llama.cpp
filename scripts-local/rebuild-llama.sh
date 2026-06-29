@@ -186,11 +186,15 @@ if [[ "$BUILD" == true ]]; then
     echo "🛠️ Building with maximum optimizations (CUDA 13.2 optimized)..."
     
     CUDA_ARGS=()
-    if [[ -x "/usr/bin/nvcc" ]]; then
+    if [[ -x "/opt/cuda/bin/nvcc" ]]; then
+        CUDA_ARGS+=("-DCMAKE_CUDA_COMPILER=/opt/cuda/bin/nvcc")
+        export PATH="/opt/cuda/bin:$PATH"
+    elif [[ -x "/usr/bin/nvcc" ]]; then
         CUDA_ARGS+=("-DCMAKE_CUDA_COMPILER=/usr/bin/nvcc")
         export PATH="/usr/bin:$PATH"
     elif [[ -x "/usr/local/cuda/bin/nvcc" ]]; then
         CUDA_ARGS+=("-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc")
+        export PATH="/usr/local/cuda/bin:$PATH"
     fi
 
     cmake -B build -S . -G Ninja \

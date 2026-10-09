@@ -2698,6 +2698,10 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
             cur = amax_src1.res;
         }
 
+        if (down_exps->ne[0] > cur->ne[0]) {
+            cur = ggml_pad(ctx0, cur, down_exps->ne[0] - cur->ne[0], 0, 0, 0);
+        }
+
         ggml_tensor * experts = build_lora_mm_id(down_exps, cur, ids, mm_ids, cached); // [n_embd, n_expert_used, n_tokens]
         cb(experts, "ffn_moe_down", il);
 

@@ -205,6 +205,7 @@ build_llama() {
         "-DGGML_ACCELERATE=ON"
         "-DGGML_BLAS=ON"
         "-DGGML_BLAS_VENDOR=Apple"
+        "-DGGML_OPENMP=OFF"
         "-DGGML_CCACHE=$CCACHE_OPT"
         "-DGGML_CURL=ON"
         "-DLLAMA_BUILD_SERVER=ON"
@@ -213,7 +214,7 @@ build_llama() {
     )
 
     echo "Running CMake configuration..."
-    cmake "${CMAKE_ARGS[@]}"
+    cmake "${CMAKE_ARGS[@]}" 2>&1 | grep -v -E "ARM -march/-mcpu not found, -mcpu=native will be used|ggml/src/CMakeLists.txt:596 \(ggml_add_cpu_backend_variant_impl\)" || true
 
     echo "Compiling targets (jobs: $JOBS)..."
     cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" -j "$JOBS"

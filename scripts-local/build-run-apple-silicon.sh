@@ -211,6 +211,7 @@ build_llama() {
         "-DLLAMA_BUILD_SERVER=ON"
         "-DLLAMA_BUILD_EXAMPLES=ON"
         "-DLLAMA_BUILD_TOOLS=ON"
+        "-DGGML_BUILD_TESTS=OFF"
     )
 
     echo "Running CMake configuration..."
@@ -368,6 +369,7 @@ MODEL_DRAFT=""
 SPEC_TYPE=""
 SPEC_DRAFT_N_MAX=""
 SPEC_DRAFT_N_MIN=""
+SPEC_DRAFT_N_UBATCH=""
 SPEC_DRAFT_P_MIN=""
 GPU_LAYERS_DRAFT=""
 
@@ -417,8 +419,8 @@ IMAGE_MIN_TOKENS=""
 if [[ -z "$CONFIG_OVERRIDE" ]]; then
     if [[ -f "$SCRIPT_DIR/qwen-3.8-flash-next-iq3_xxs.conf" ]]; then
         CONFIG_OVERRIDE="$SCRIPT_DIR/qwen-3.8-flash-next-iq3_xxs.conf"
-    elif [[ -f "$SCRIPT_DIR/qwen-3.8-flash-next-q2.conf" ]]; then
-        CONFIG_OVERRIDE="$SCRIPT_DIR/qwen-3.8-flash-next-q2.conf"
+    elif [[ -f "$SCRIPT_DIR/qwen-3.8-flash-next-coder.conf" ]]; then
+        CONFIG_OVERRIDE="$SCRIPT_DIR/qwen-3.8-flash-next-coder.conf"
     elif [[ -f "$SCRIPT_DIR/qwen-3.8-27b-gsq.conf" ]]; then
         CONFIG_OVERRIDE="$SCRIPT_DIR/qwen-3.8-27b-gsq.conf"
     fi
@@ -533,9 +535,15 @@ else
     # Speculative decoding & draft models
     [[ -n "${MODEL_DRAFT:-}" ]] && CMD+=("--model-draft" "$MODEL_DRAFT")
     [[ -n "${SPEC_TYPE:-}" ]] && CMD+=("--spec-type" "$SPEC_TYPE")
-    [[ -n "${SPEC_DRAFT_N_MAX:-}" ]] && CMD+=("--spec-draft-n-max" "$SPEC_DRAFT_N_MAX")
-    [[ -n "${SPEC_DRAFT_N_MIN:-}" ]] && CMD+=("--spec-draft-n-min" "$SPEC_DRAFT_N_MIN")
+    if [[ "${SPEC_TYPE:-}" == *"ngram-mod"* ]]; then
+        [[ -n "${SPEC_DRAFT_N_MAX:-}" ]] && CMD+=("--spec-ngram-mod-n-max" "$SPEC_DRAFT_N_MAX")
+        [[ -n "${SPEC_DRAFT_N_MIN:-}" ]] && CMD+=("--spec-ngram-mod-n-min" "$SPEC_DRAFT_N_MIN")
+    else
+        [[ -n "${SPEC_DRAFT_N_MAX:-}" ]] && CMD+=("--spec-draft-n-max" "$SPEC_DRAFT_N_MAX")
+        [[ -n "${SPEC_DRAFT_N_MIN:-}" ]] && CMD+=("--spec-draft-n-min" "$SPEC_DRAFT_N_MIN")
+    fi
     [[ -n "${SPEC_DRAFT_P_MIN:-}" ]] && CMD+=("--spec-draft-p-min" "$SPEC_DRAFT_P_MIN")
+    [[ -n "${SPEC_DRAFT_N_UBATCH:-}" ]] && CMD+=("--spec-draft-n-ubatch" "$SPEC_DRAFT_N_UBATCH")
     [[ -n "${GPU_LAYERS_DRAFT:-}" ]] && CMD+=("--gpu-layers-draft" "$GPU_LAYERS_DRAFT")
 
     CMD+=("--parallel" "$PARALLEL")
@@ -656,7 +664,7 @@ else
         CHECK_HOST="${HOST}"
         [[ "$CHECK_HOST" == "0.0.0.0" ]] && CHECK_HOST="127.0.0.1"
         INITIALIZED=false
-        for i in {1..20}; do
+        for i in {1..75}; do
             sleep 1
             if ! kill -0 "$SERVER_PID" 2>/dev/null; then
                 echo "Error: Server failed to start (crashed). Last log lines:"
